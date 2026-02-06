@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spinerate — Spin Class Planner</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;--card:#14141f;--card2:#1a1a2e;--border:#2a2a3e;
+  --text:#e0e0e8;--text2:#9090a8;--purple:#a855f7;--cyan:#06b6d4;
+  --green:#22c55e;--yellow:#eab308;--orange:#f97316;--red:#ef4444;
+  --radius:12px;
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.6;min-height:100vh}
+a{color:var(--cyan);text-decoration:none}
+.container{max-width:900px;margin:0 auto;padding:20px 16px 60px}
+
+/* Header */
+.header{text-align:center;padding:32px 0 24px;position:relative}
+.header h1{font-size:1.6rem;font-weight:700;background:linear-gradient(135deg,var(--purple),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header .subtitle{color:var(--text2);font-size:.85rem;margin-top:4px}
+.tags{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.tag{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:4px 14px;font-size:.75rem;color:var(--text2)}
+.tag.purple{border-color:var(--purple);color:var(--purple)}
+.tag.cyan{border-color:var(--cyan);color:var(--cyan)}
+
+/* Energy Curve */
+.energy-curve{background:var(--card);border-radius:var(--radius);padding:20px;margin:20px 0}
+.energy-curve h3{font-size:.85rem;color:var(--text2);margin-bottom:12px;font-weight:500}
+.curve-bar{display:flex;gap:2px;height:60px;align-items:flex-end}
+.curve-seg{border-radius:4px 4px 0 0;flex:1;position:relative;transition:all .3s;cursor:pointer;min-width:0}
+.curve-seg:hover{opacity:.8;transform:scaleY(1.05);transform-origin:bottom}
+.curve-seg .tip{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:.6rem;color:var(--text2);white-space:nowrap;opacity:0;transition:opacity .2s}
+.curve-seg:hover .tip{opacity:1}
+.curve-labels{display:flex;gap:2px;margin-top:6px}
+.curve-labels span{flex:1;text-align:center;font-size:.6rem;color:var(--text2)}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin:16px 0;transition:border-color .2s}
+.card:hover{border-color:#3a3a5e}
+.card h2{font-size:1rem;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h2 .icon{font-size:1.1rem}
+
+/* Overview Table */
+.overview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.ov-item{background:var(--card2);border-radius:8px;padding:10px 14px}
+.ov-item .label{font-size:.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.ov-item .value{font-size:.95rem;font-weight:600;margin-top:2px}
+
+/* Sections / Segments */
+.segment{margin:20px 0}
+.segment-header{display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;user-select:none}
+.segment-header h3{font-size:.95rem;font-weight:600}
+.segment-badge{font-size:.65rem;padding:3px 10px;border-radius:12px;font-weight:600}
+.badge-warmup{background:#22c55e22;color:var(--green)}
+.badge-build{background:#eab30822;color:var(--yellow)}
+.badge-peak{background:#ef444422;color:var(--red)}
+.badge-cool{background:#06b6d422;color:var(--cyan)}
+
+/* Track Cards */
+.track{background:var(--card2);border:1px solid var(--border);border-radius:10px;margin:8px 0;overflow:hidden;transition:border-color .2s}
+.track:hover{border-color:#4a4a6e}
+.track-head{padding:12px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.track-head .left{display:flex;flex-direction:column;gap:2px}
+.track-title{font-weight:600;font-size:.9rem}
+.track-artist{font-size:.75rem;color:var(--text2)}
+.track-meta{display:flex;gap:12px;align-items:center}
+.track-meta span{font-size:.7rem;color:var(--text2)}
+.track-meta .bpm{color:var(--purple);font-weight:600}
+.chevron{font-size:.8rem;color:var(--text2);transition:transform .3s}
+.chevron.open{transform:rotate(180deg)}
+.track-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.track-body.open{max-height:1200px}
+.track-content{padding:0 16px 16px}
+
+/* Drops */
+.drops{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.drop-chip{background:#a855f722;border:1px solid var(--purple);color:var(--purple);border-radius:16px;padding:3px 12px;font-size:.7rem;font-weight:600}
+.drop-chip.secondary{background:#06b6d422;border-color:var(--cyan);color:var(--cyan)}
+
+/* Timeline Table */
+.tl-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.78rem}
+.tl-table th{text-align:left;color:var(--text2);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--border);font-size:.7rem;text-transform:uppercase;letter-spacing:.3px}
+.tl-table td{padding:6px 8px;border-bottom:1px solid #1e1e30;vertical-align:top}
+.tl-table tr:last-child td{border-bottom:none}
+.tl-time{color:var(--cyan);font-family:monospace;font-weight:600;white-space:nowrap}
+.tl-move{font-weight:600;color:var(--text)}
+.tl-cue{color:var(--text2);font-style:italic}
+
+/* RPE Bar */
+.rpe-bar{display:inline-flex;align-items:center;gap:4px}
+.rpe-fill{height:6px;border-radius:3px;display:inline-block}
+.rpe-num{font-size:.7rem;font-weight:700;min-width:14px}
+
+/* Coach Script */
+.script-block{background:var(--card2);border-radius:8px;padding:14px;margin:8px 0;position:relative}
+.script-block .label{font-size:.7rem;color:var(--purple);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.script-block p{font-size:.85rem;color:var(--text);line-height:1.5}
+.copy-btn{position:absolute;top:10px;right:10px;background:var(--border);border:none;color:var(--text2);border-radius:6px;padding:4px 10px;font-size:.65rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{background:var(--purple);color:#fff}
+.copy-btn.copied{background:var(--green);color:#fff}
+.rescue-list{list-style:none;padding:0}
+.rescue-list li{padding:6px 0;border-bottom:1px solid #1e1e30;font-size:.85rem}
+.rescue-list li:last-child{border-bottom:none}
+.rescue-list li::before{content:"💡";margin-right:8px}
+
+/* Search List */
+.search-list{list-style:none;padding:0}
+.search-list li{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1e1e30;font-size:.85rem}
+.search-list li:last-child{border-bottom:none}
+.search-list .num{color:var(--text2);font-size:.75rem;margin-right:10px;min-width:18px}
+
+/* Memory Panel */
+.memory-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin:20px 0}
+.memory-panel h2{font-size:1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:.85rem;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus{border-color:var(--purple)}
+.form-group select{cursor:pointer}
+.form-group.full{grid-column:1/-1}
+.btn{background:linear-gradient(135deg,var(--purple),var(--cyan));border:none;border-radius:8px;padding:10px 24px;color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;transition:opacity .2s;margin-top:8px}
+.btn:hover{opacity:.85}
+.btn-secondary{background:var(--card2);border:1px solid var(--border);color:var(--text2)}
+.btn-secondary:hover{border-color:var(--purple);color:var(--purple);background:var(--card2)}
+.btn-row{display:flex;gap:10px;grid-column:1/-1;margin-top:4px;flex-wrap:wrap}
+
+/* History */
+.history{margin-top:16px}
+.history h4{font-size:.8rem;color:var(--text2);margin-bottom:8px}
+.history-item{background:var(--card2);border-radius:8px;padding:10px 14px;margin:6px 0;cursor:pointer;transition:border-color .2s;border:1px solid transparent;display:flex;justify-content:space-between;align-items:center}
+.history-item:hover{border-color:var(--purple)}
+.history-item .hi-info{font-size:.8rem}
+.history-item .hi-date{font-size:.7rem;color:var(--text2)}
+.history-item .hi-del{background:none;border:none;color:var(--text2);cursor:pointer;font-size:.7rem;padding:2px 6px;border-radius:4px}
+.history-item .hi-del:hover{color:var(--red);background:#ef444422}
+
+/* Tabs */
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px}
+.tab-btn{background:none;border:none;color:var(--text2);padding:10px 18px;font-size:.8rem;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;font-weight:500}
+.tab-btn.active{color:var(--purple);border-bottom-color:var(--purple)}
+.tab-btn:hover{color:var(--text)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Responsive */
+@media(max-width:600px){
+  .form-grid{grid-template-columns:1fr}
+  .overview-grid{grid-template-columns:1fr 1fr}
+  .container{padding:12px 10px 40px}
+  .header h1{font-size:1.3rem}
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#4a4a6e}
+
+/* Spotify */
+.spotify-btn{background:#1DB954;border:none;border-radius:8px;padding:10px 24px;color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;transition:opacity .2s;display:inline-flex;align-items:center;gap:8px}
+.spotify-btn:hover{opacity:.85}
+.spotify-btn:disabled{opacity:.5;cursor:not-allowed}
+.spotify-btn svg{width:20px;height:20px;fill:#fff}
+.spotify-status-connected{color:#1DB954;font-weight:600}
+.spotify-status-disconnected{color:var(--text2)}
+.spotify-progress{background:var(--card2);border-radius:8px;padding:12px 16px;margin-top:10px;font-size:.85rem}
+.spotify-progress .bar{height:4px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden}
+.spotify-progress .bar-fill{height:100%;background:#1DB954;border-radius:2px;transition:width .3s}
+
+/* Fade in */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .4s ease forwards}
+</style>
+</head>
+<body>
+
+<div class="container" id="app">
+
+  <!-- Tab Navigation -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('plan')">教案</button>
+    <button class="tab-btn" onclick="switchTab('input')">新建/编辑</button>
+    <button class="tab-btn" onclick="switchTab('history')">历史记录</button>
+    <button class="tab-btn" onclick="switchTab('spotify')">Spotify</button>
+  </div>
+
+  <!-- TAB: Plan -->
+  <div class="tab-content active" id="tab-plan">
+    <div id="plan-content"></div>
+    <div id="plan-empty" style="text-align:center;padding:60px 0;color:var(--text2)">
+      <p style="font-size:1.6rem;margin-bottom:4px;font-weight:700;background:linear-gradient(135deg,var(--purple),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Spinerate</p>
+      <p style="font-size:.95rem;margin-bottom:12px;color:var(--text2)">Spin Class Planner for Instructors</p>
+      <p style="font-size:.85rem">Click the "New/Edit" tab to create your first lesson plan</p>
+    </div>
+  </div>
+
+  <!-- TAB: Input -->
+  <div class="tab-content" id="tab-input">
+    <div class="memory-panel" style="border:none;background:transparent;padding:0">
+      <h2>课程设置</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>日期</label>
+          <input type="date" id="f-date">
+        </div>
+        <div class="form-group">
+          <label>课长 (分钟)</label>
+          <select id="f-duration">
+            <option value="30">30 min</option>
+            <option value="45" selected>45 min</option>
+            <option value="60">60 min</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>主题</label>
+          <select id="f-theme">
+            <option value="EDM Big-Room">EDM Big-Room / Festival</option>
+            <option value="Pop / Dance-Pop">Pop / Dance-Pop</option>
+            <option value="Latin / Reggaeton">Latin / Reggaeton</option>
+            <option value="Hip-Hop / R&B">Hip-Hop / R&B</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>学员水平</label>
+          <select id="f-level">
+            <option value="Beginner">Beginner</option>
+            <option value="Mixed">Mixed</option>
+            <option value="Intermediate" selected>Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>目标强度</label>
+          <select id="f-intensity">
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High" selected>High</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>歌词限制</label>
+          <select id="f-explicit">
+            <option value="yes">允许 Explicit</option>
+            <option value="no">No Explicit</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>必须包含的艺人（逗号分隔，可留空）</label>
+          <input type="text" id="f-artists" placeholder="如 Calvin Harris, Martin Garrix">
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="generatePlan()">生成教案</button>
+          <button class="btn btn-secondary" onclick="loadDemo()">加载示例教案</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: History -->
+  <div class="tab-content" id="tab-history">
+    <div class="card">
+      <h2>历史教案</h2>
+      <div id="history-list"></div>
+      <div id="history-empty" style="text-align:center;padding:30px 0;color:var(--text2);font-size:.85rem">暂无历史记录</div>
+    </div>
+  </div>
+
+  <!-- TAB: Spotify -->
+  <div class="tab-content" id="tab-spotify">
+    <div class="card">
+      <h2><span class="icon">🎵</span>Spotify Integration</h2>
+      <p style="font-size:.85rem;color:var(--text2);margin-bottom:16px">
+        Connect your Spotify account to automatically create playlists from your lesson plans.
+        You need a Spotify Developer Client ID — get one free at
+        <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a>.
+      </p>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Spotify Client ID</label>
+          <input type="text" id="f-spotify-client-id" placeholder="Paste your Client ID here" style="font-family:monospace;font-size:.8rem">
+        </div>
+        <div class="form-group full">
+          <label>Redirect URI <span style="font-weight:normal;color:var(--text2)">(must match your Spotify app settings)</span></label>
+          <input type="text" id="f-spotify-redirect" readonly style="font-family:monospace;font-size:.8rem;opacity:.7;cursor:default">
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="saveSpotifySettings()">Save Settings</button>
+          <button class="btn btn-secondary" id="spotify-connect-btn" onclick="spotifyConnect()">Connect Spotify</button>
+          <button class="btn btn-secondary" id="spotify-disconnect-btn" onclick="spotifyDisconnect()" style="display:none">Disconnect</button>
+        </div>
+      </div>
+      <div id="spotify-status" style="margin-top:16px;font-size:.85rem"></div>
+      <div style="margin-top:20px;padding:16px;background:var(--card2);border-radius:8px;font-size:.8rem;color:var(--text2)">
+        <strong style="color:var(--text)">Setup Instructions:</strong>
+        <ol style="margin:8px 0 0 16px;line-height:1.8">
+          <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">Spotify Developer Dashboard</a> and create an app</li>
+          <li>Copy your <strong>Client ID</strong> and paste it above</li>
+          <li>In your Spotify app settings, add the <strong>Redirect URI</strong> shown above</li>
+          <li>Click <strong>Save Settings</strong>, then <strong>Connect Spotify</strong></li>
+          <li>After connecting, go to any lesson plan and click <strong>"Create Spotify Playlist"</strong></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// TRACK DATABASE — Multi-genre, ~15 tracks per genre
+// Each track: title, artist, version, durSec, bpm, genre, tags[],
+//   explicit(bool), energy(1-10), drops[{timeSec,type,confidence}]
+// Drop times are estimated based on typical genre structure.
+// ============================================================
+const TRACK_DB = [
+  // ---- EDM Big-Room ----
+  {title:'Titanium',artist:'David Guetta ft. Sia',version:'Radio Edit',durSec:245,bpm:126,genre:'EDM Big-Room',tags:['edm','bigroom','david guetta','sia'],explicit:false,energy:5,drops:[{timeSec:68,type:'主 Drop',conf:'中'},{timeSec:158,type:'副 Drop',conf:'中'}]},
+  {title:'Tremor',artist:'Dimitri Vegas & Like Mike, Martin Garrix',version:'Original Mix',durSec:304,bpm:128,genre:'EDM Big-Room',tags:['edm','bigroom','dimitri vegas','martin garrix'],explicit:false,energy:7,drops:[{timeSec:88,type:'主 Drop',conf:'中'},{timeSec:206,type:'副 Drop',conf:'中'}]},
+  {title:'If I Lose Myself',artist:'OneRepublic (Alesso Remix)',version:'Remix',durSec:277,bpm:128,genre:'EDM Big-Room',tags:['edm','progressive','alesso','onerepublic'],explicit:false,energy:6,drops:[{timeSec:75,type:'主 Drop',conf:'中'},{timeSec:185,type:'副 Drop',conf:'中'}]},
+  {title:'Tsunami',artist:'DVBBS & Borgeous',version:'Original Mix',durSec:198,bpm:128,genre:'EDM Big-Room',tags:['edm','bigroom','dvbbs','borgeous'],explicit:false,energy:8,drops:[{timeSec:60,type:'主 Drop',conf:'高'},{timeSec:135,type:'副 Drop',conf:'中'}]},
+  {title:'Mammoth',artist:'Dimitri Vegas & Like Mike vs MOGUAI',version:'Original Mix',durSec:290,bpm:128,genre:'EDM Big-Room',tags:['edm','bigroom','dimitri vegas','moguai'],explicit:false,energy:7,drops:[{timeSec:90,type:'主 Drop',conf:'中'},{timeSec:200,type:'副 Drop',conf:'中'}]},
+  {title:'Animals',artist:'Martin Garrix',version:'Original Mix',durSec:304,bpm:128,genre:'EDM Big-Room',tags:['edm','bigroom','martin garrix'],explicit:false,energy:9,drops:[{timeSec:80,type:'主 Drop',conf:'高'},{timeSec:170,type:'副 Drop',conf:'中'},{timeSec:230,type:'Bridge',conf:'中'}]},
+  {title:'Spaceman',artist:'Hardwell',version:'Original Mix',durSec:325,bpm:128,genre:'EDM Big-Room',tags:['edm','bigroom','hardwell'],explicit:false,energy:9,drops:[{timeSec:95,type:'主 Drop',conf:'中'},{timeSec:210,type:'副 Drop',conf:'中'}]},
+  {title:'Wake Me Up',artist:'Avicii',version:'Radio Edit',durSec:247,bpm:124,genre:'EDM Big-Room',tags:['edm','progressive','avicii'],explicit:false,energy:4,drops:[{timeSec:55,type:'主 Drop',conf:'中'},{timeSec:150,type:'副 Drop',conf:'中'}]},
+  {title:'Sun Is Shining',artist:'Axwell Ingrosso',version:'Radio Edit',durSec:263,bpm:122,genre:'EDM Big-Room',tags:['edm','progressive','axwell','ingrosso'],explicit:false,energy:3,drops:[{timeSec:70,type:'主 Drop',conf:'中'}]},
+  {title:'Levels',artist:'Avicii',version:'Radio Edit',durSec:198,bpm:126,genre:'EDM Big-Room',tags:['edm','progressive','avicii'],explicit:false,energy:6,drops:[{timeSec:62,type:'主 Drop',conf:'高'},{timeSec:140,type:'副 Drop',conf:'中'}]},
+  {title:'Epic',artist:'Sandro Silva & Quintino',version:'Original Mix',durSec:269,bpm:128,genre:'EDM Big-Room',tags:['edm','bigroom','sandro silva','quintino'],explicit:false,energy:8,drops:[{timeSec:75,type:'主 Drop',conf:'中'},{timeSec:180,type:'副 Drop',conf:'中'}]},
+  {title:"Don't You Worry Child",artist:'Swedish House Mafia ft. John Martin',version:'Radio Edit',durSec:212,bpm:129,genre:'EDM Big-Room',tags:['edm','progressive','swedish house mafia'],explicit:false,energy:5,drops:[{timeSec:68,type:'主 Drop',conf:'中'},{timeSec:150,type:'副 Drop',conf:'中'}]},
+  {title:'Dare You',artist:'Hardwell ft. Matthew Koma',version:'Radio Edit',durSec:208,bpm:128,genre:'EDM Big-Room',tags:['edm','bigroom','hardwell'],explicit:false,energy:7,drops:[{timeSec:65,type:'主 Drop',conf:'中'},{timeSec:145,type:'副 Drop',conf:'中'}]},
+  {title:'In My Mind',artist:'Dynoro & Gigi D\'Agostino',version:'Radio Edit',durSec:198,bpm:124,genre:'EDM Big-Room',tags:['edm','dance','dynoro'],explicit:false,energy:4,drops:[{timeSec:50,type:'主 Drop',conf:'中'}]},
+  {title:'Saved My Life',artist:'David Guetta & Morten ft. Lovespeake',version:'Radio Edit',durSec:210,bpm:127,genre:'EDM Big-Room',tags:['edm','bigroom','david guetta'],explicit:false,energy:6,drops:[{timeSec:72,type:'主 Drop',conf:'中'},{timeSec:155,type:'副 Drop',conf:'中'}]},
+
+  // ---- Pop / Dance-Pop ----
+  {title:'Blinding Lights',artist:'The Weeknd',version:'Radio Edit',durSec:200,bpm:171,genre:'Pop / Dance-Pop',tags:['pop','synthwave','the weeknd','weeknd'],explicit:false,energy:6,drops:[{timeSec:48,type:'主 Drop',conf:'中'},{timeSec:130,type:'副 Drop',conf:'中'}]},
+  {title:'Uptown Funk',artist:'Bruno Mars ft. Mark Ronson',version:'Radio Edit',durSec:270,bpm:115,genre:'Pop / Dance-Pop',tags:['pop','funk','bruno mars','mark ronson'],explicit:false,energy:7,drops:[{timeSec:30,type:'主 Drop',conf:'高'},{timeSec:130,type:'副 Drop',conf:'中'}]},
+  {title:'24K Magic',artist:'Bruno Mars',version:'Radio Edit',durSec:226,bpm:107,genre:'Pop / Dance-Pop',tags:['pop','funk','bruno mars'],explicit:false,energy:6,drops:[{timeSec:35,type:'主 Drop',conf:'中'},{timeSec:140,type:'副 Drop',conf:'中'}]},
+  {title:'Closer',artist:'The Chainsmokers ft. Halsey',version:'Radio Edit',durSec:244,bpm:95,genre:'Pop / Dance-Pop',tags:['pop','edm','chainsmokers','halsey'],explicit:false,energy:5,drops:[{timeSec:55,type:'主 Drop',conf:'中'},{timeSec:150,type:'副 Drop',conf:'中'}]},
+  {title:'Something Just Like This',artist:'The Chainsmokers & Coldplay',version:'Radio Edit',durSec:247,bpm:100,genre:'Pop / Dance-Pop',tags:['pop','edm','chainsmokers','coldplay'],explicit:false,energy:5,drops:[{timeSec:68,type:'主 Drop',conf:'中'},{timeSec:165,type:'副 Drop',conf:'中'}]},
+  {title:'Don\'t Start Now',artist:'Dua Lipa',version:'Radio Edit',durSec:183,bpm:124,genre:'Pop / Dance-Pop',tags:['pop','disco','dua lipa'],explicit:false,energy:6,drops:[{timeSec:42,type:'主 Drop',conf:'中'},{timeSec:120,type:'副 Drop',conf:'中'}]},
+  {title:'Levitating',artist:'Dua Lipa',version:'Radio Edit',durSec:203,bpm:103,genre:'Pop / Dance-Pop',tags:['pop','disco','dua lipa'],explicit:false,energy:6,drops:[{timeSec:40,type:'主 Drop',conf:'中'},{timeSec:135,type:'副 Drop',conf:'中'}]},
+  {title:'Flowers',artist:'Miley Cyrus',version:'Radio Edit',durSec:200,bpm:118,genre:'Pop / Dance-Pop',tags:['pop','disco','miley cyrus'],explicit:false,energy:5,drops:[{timeSec:45,type:'主 Drop',conf:'中'},{timeSec:130,type:'副 Drop',conf:'中'}]},
+  {title:'Shake It Off',artist:'Taylor Swift',version:'Radio Edit',durSec:219,bpm:160,genre:'Pop / Dance-Pop',tags:['pop','dance','taylor swift'],explicit:false,energy:7,drops:[{timeSec:35,type:'主 Drop',conf:'中'},{timeSec:140,type:'副 Drop',conf:'中'}]},
+  {title:'Shape of You',artist:'Ed Sheeran',version:'Radio Edit',durSec:234,bpm:96,genre:'Pop / Dance-Pop',tags:['pop','tropical','ed sheeran'],explicit:false,energy:5,drops:[{timeSec:50,type:'主 Drop',conf:'中'},{timeSec:155,type:'副 Drop',conf:'中'}]},
+  {title:'Roses',artist:'The Chainsmokers ft. ROZES',version:'Radio Edit',durSec:222,bpm:100,genre:'Pop / Dance-Pop',tags:['pop','edm','chainsmokers'],explicit:false,energy:4,drops:[{timeSec:60,type:'主 Drop',conf:'中'}]},
+  {title:'Stay',artist:'The Kid LAROI & Justin Bieber',version:'Radio Edit',durSec:141,bpm:170,genre:'Pop / Dance-Pop',tags:['pop','dance','justin bieber','kid laroi'],explicit:true,energy:6,drops:[{timeSec:30,type:'主 Drop',conf:'中'},{timeSec:85,type:'副 Drop',conf:'中'}]},
+  {title:'That\'s What I Like',artist:'Bruno Mars',version:'Radio Edit',durSec:206,bpm:134,genre:'Pop / Dance-Pop',tags:['pop','funk','bruno mars'],explicit:false,energy:5,drops:[{timeSec:45,type:'主 Drop',conf:'中'},{timeSec:135,type:'副 Drop',conf:'中'}]},
+  {title:'Treasure',artist:'Bruno Mars',version:'Radio Edit',durSec:178,bpm:116,genre:'Pop / Dance-Pop',tags:['pop','funk','bruno mars'],explicit:false,energy:6,drops:[{timeSec:32,type:'主 Drop',conf:'中'},{timeSec:110,type:'副 Drop',conf:'中'}]},
+  {title:'Selfie',artist:'The Chainsmokers',version:'Radio Edit',durSec:222,bpm:128,genre:'Pop / Dance-Pop',tags:['pop','edm','chainsmokers'],explicit:true,energy:7,drops:[{timeSec:55,type:'主 Drop',conf:'中'},{timeSec:150,type:'副 Drop',conf:'中'}]},
+
+  // ---- Latin / Reggaeton ----
+  {title:'Despacito',artist:'Luis Fonsi ft. Daddy Yankee',version:'Radio Edit',durSec:229,bpm:89,genre:'Latin / Reggaeton',tags:['latin','reggaeton','luis fonsi','daddy yankee'],explicit:false,energy:5,drops:[{timeSec:45,type:'主 Drop',conf:'中'},{timeSec:140,type:'副 Drop',conf:'中'}]},
+  {title:'Mi Gente',artist:'J Balvin & Willy William',version:'Original',durSec:189,bpm:104,genre:'Latin / Reggaeton',tags:['latin','reggaeton','j balvin'],explicit:false,energy:7,drops:[{timeSec:38,type:'主 Drop',conf:'中'},{timeSec:120,type:'副 Drop',conf:'中'}]},
+  {title:'Dákiti',artist:'Bad Bunny & Jhay Cortez',version:'Original',durSec:205,bpm:110,genre:'Latin / Reggaeton',tags:['latin','reggaeton','bad bunny'],explicit:true,energy:6,drops:[{timeSec:42,type:'主 Drop',conf:'中'},{timeSec:135,type:'副 Drop',conf:'中'}]},
+  {title:'Taki Taki',artist:'DJ Snake ft. Selena Gomez, Ozuna, Cardi B',version:'Radio Edit',durSec:224,bpm:96,genre:'Latin / Reggaeton',tags:['latin','reggaeton','dj snake','selena gomez','ozuna'],explicit:false,energy:7,drops:[{timeSec:52,type:'主 Drop',conf:'中'},{timeSec:145,type:'副 Drop',conf:'中'}]},
+  {title:'Vivir Mi Vida',artist:'Marc Anthony',version:'Radio Edit',durSec:262,bpm:126,genre:'Latin / Reggaeton',tags:['latin','salsa','marc anthony'],explicit:false,energy:6,drops:[{timeSec:50,type:'主 Drop',conf:'中'},{timeSec:160,type:'副 Drop',conf:'中'}]},
+  {title:'Gasolina',artist:'Daddy Yankee',version:'Original',durSec:197,bpm:96,genre:'Latin / Reggaeton',tags:['latin','reggaeton','daddy yankee'],explicit:true,energy:8,drops:[{timeSec:35,type:'主 Drop',conf:'高'},{timeSec:120,type:'副 Drop',conf:'中'}]},
+  {title:'Bailando',artist:'Enrique Iglesias ft. Descemer Bueno',version:'Radio Edit',durSec:254,bpm:102,genre:'Latin / Reggaeton',tags:['latin','pop','enrique iglesias'],explicit:false,energy:5,drops:[{timeSec:55,type:'主 Drop',conf:'中'},{timeSec:165,type:'副 Drop',conf:'中'}]},
+  {title:'Con Calma',artist:'Daddy Yankee ft. Snow',version:'Radio Edit',durSec:193,bpm:94,genre:'Latin / Reggaeton',tags:['latin','reggaeton','daddy yankee'],explicit:false,energy:6,drops:[{timeSec:40,type:'主 Drop',conf:'中'},{timeSec:125,type:'副 Drop',conf:'中'}]},
+  {title:'Bom Diggy',artist:'Zack Knight & Jasmin Walia',version:'Original',durSec:192,bpm:100,genre:'Latin / Reggaeton',tags:['latin','dance'],explicit:false,energy:5,drops:[{timeSec:38,type:'主 Drop',conf:'中'}]},
+  {title:'Te Felicito',artist:'Shakira & Rauw Alejandro',version:'Radio Edit',durSec:195,bpm:104,genre:'Latin / Reggaeton',tags:['latin','reggaeton','shakira'],explicit:false,energy:6,drops:[{timeSec:45,type:'主 Drop',conf:'中'},{timeSec:130,type:'副 Drop',conf:'中'}]},
+  {title:'La Bicicleta',artist:'Carlos Vives & Shakira',version:'Radio Edit',durSec:230,bpm:100,genre:'Latin / Reggaeton',tags:['latin','pop','shakira','carlos vives'],explicit:false,energy:4,drops:[{timeSec:48,type:'主 Drop',conf:'中'}]},
+  {title:'Dura',artist:'Daddy Yankee',version:'Original',durSec:198,bpm:98,genre:'Latin / Reggaeton',tags:['latin','reggaeton','daddy yankee'],explicit:false,energy:7,drops:[{timeSec:32,type:'主 Drop',conf:'中'},{timeSec:118,type:'副 Drop',conf:'中'}]},
+
+  // ---- Hip-Hop / R&B ----
+  {title:'HUMBLE.',artist:'Kendrick Lamar',version:'Radio Edit',durSec:177,bpm:150,genre:'Hip-Hop / R&B',tags:['hiphop','rap','kendrick lamar'],explicit:true,energy:8,drops:[{timeSec:30,type:'主 Drop',conf:'中'},{timeSec:100,type:'副 Drop',conf:'中'}]},
+  {title:'SICKO MODE',artist:'Travis Scott',version:'Radio Edit',durSec:312,bpm:155,genre:'Hip-Hop / R&B',tags:['hiphop','trap','travis scott'],explicit:true,energy:9,drops:[{timeSec:60,type:'主 Drop',conf:'中'},{timeSec:155,type:'副 Drop',conf:'中'},{timeSec:220,type:'Bridge',conf:'中'}]},
+  {title:'Lose Yourself',artist:'Eminem',version:'Radio Edit',durSec:326,bpm:87,genre:'Hip-Hop / R&B',tags:['hiphop','rap','eminem'],explicit:false,energy:8,drops:[{timeSec:55,type:'主 Drop',conf:'中'},{timeSec:180,type:'副 Drop',conf:'中'}]},
+  {title:'Stronger',artist:'Kanye West',version:'Radio Edit',durSec:312,bpm:104,genre:'Hip-Hop / R&B',tags:['hiphop','electronic','kanye west'],explicit:false,energy:7,drops:[{timeSec:68,type:'主 Drop',conf:'中'},{timeSec:195,type:'副 Drop',conf:'中'}]},
+  {title:'Goosebumps',artist:'Travis Scott',version:'Radio Edit',durSec:244,bpm:130,genre:'Hip-Hop / R&B',tags:['hiphop','trap','travis scott'],explicit:true,energy:7,drops:[{timeSec:50,type:'主 Drop',conf:'中'},{timeSec:155,type:'副 Drop',conf:'中'}]},
+  {title:'In Da Club',artist:'50 Cent',version:'Radio Edit',durSec:193,bpm:90,genre:'Hip-Hop / R&B',tags:['hiphop','rap','50 cent'],explicit:true,energy:7,drops:[{timeSec:28,type:'主 Drop',conf:'高'},{timeSec:110,type:'副 Drop',conf:'中'}]},
+  {title:'Yeah!',artist:'Usher ft. Lil Jon & Ludacris',version:'Radio Edit',durSec:250,bpm:105,genre:'Hip-Hop / R&B',tags:['rnb','hiphop','usher','lil jon'],explicit:false,energy:7,drops:[{timeSec:40,type:'主 Drop',conf:'中'},{timeSec:145,type:'副 Drop',conf:'中'}]},
+  {title:'Love Galore',artist:'SZA ft. Travis Scott',version:'Radio Edit',durSec:277,bpm:130,genre:'Hip-Hop / R&B',tags:['rnb','hiphop','sza','travis scott'],explicit:true,energy:4,drops:[{timeSec:65,type:'主 Drop',conf:'中'}]},
+  {title:'Blinding Lights Remix',artist:'The Weeknd (Chromatics Remix)',version:'Remix',durSec:230,bpm:128,genre:'Hip-Hop / R&B',tags:['rnb','synthwave','the weeknd','weeknd'],explicit:false,energy:5,drops:[{timeSec:55,type:'主 Drop',conf:'中'},{timeSec:150,type:'副 Drop',conf:'中'}]},
+  {title:'POWER',artist:'Kanye West',version:'Radio Edit',durSec:292,bpm:76,genre:'Hip-Hop / R&B',tags:['hiphop','rap','kanye west'],explicit:true,energy:8,drops:[{timeSec:45,type:'主 Drop',conf:'中'},{timeSec:170,type:'副 Drop',conf:'中'}]},
+  {title:'Industry Baby',artist:'Lil Nas X & Jack Harlow',version:'Radio Edit',durSec:212,bpm:150,genre:'Hip-Hop / R&B',tags:['hiphop','pop','lil nas x'],explicit:true,energy:7,drops:[{timeSec:42,type:'主 Drop',conf:'中'},{timeSec:135,type:'副 Drop',conf:'中'}]},
+  {title:'Savage',artist:'Megan Thee Stallion',version:'Radio Edit',durSec:176,bpm:90,genre:'Hip-Hop / R&B',tags:['hiphop','rap','megan thee stallion'],explicit:true,energy:7,drops:[{timeSec:28,type:'主 Drop',conf:'中'},{timeSec:100,type:'副 Drop',conf:'中'}]},
+];
+
+// ============================================================
+// MOVE LIBRARY & CHOREO ENGINE
+// ============================================================
+const MOVES = {
+  warmup: [
+    {move:'up 4 down 4', cues:['找到节奏，跟我起','稳住节奏，慢慢来','四拍上四拍下，热身'], rpeBase:3},
+    {move:'shoulder tab', cues:['肩膀跟拍，轻松热身','肩膀松开，跟节奏','轻轻 tab 肩膀'], rpeBase:3},
+    {move:'sway right 4 sway left 4', cues:['左右摇，打开身体','摇起来，唤醒全身','左四右四，感受音乐'], rpeBase:3},
+    {move:'up 2 down 2', cues:['加快一点，两拍起','二上二下，热起来'], rpeBase:4},
+  ],
+  build: [
+    {move:'single tab back', cues:['Tab back! 一下一下','Tab back 蓄力！','节奏 tab back 跟住'], rpeBase:5},
+    {move:'tab 1 pulse 1', cues:['Tab pulse GO!','Tab pulse 跟上!','一 tab 一 pulse'], rpeBase:6},
+    {move:'sway right 4 sway left 4', cues:['左右摇摆恢复','摇起来放松','左右 sway 调整'], rpeBase:5},
+    {move:'right pull left pull', cues:['Pull! 左右交替拉','交替 pull 蓄力!','Pull pull pull!'], rpeBase:6},
+    {move:'up 2 down 2', cues:['稳住节奏','二上二下跟住','保持速度'], rpeBase:5},
+    {move:'shoulder tab', cues:['肩膀跟节奏','轻一点，肩膀 tab','肩膀恢复'], rpeBase:4},
+    {move:'tab 1 push 1', cues:['Push it!','Tab push 加码!','一 tab 一 push'], rpeBase:7},
+  ],
+  peak: [
+    {move:'double tab 1 push 1', cues:['Double push 全开!','Double push 不要停!','全力 double push!'], rpeBase:9},
+    {move:'double tab 1 pulse 1', cues:['Double pulse 全力!','Double pulse 爆发!','Pulse pulse 不停!'], rpeBase:9},
+    {move:'tab 1 push 1', cues:['Push push push!','全力 push!','Push 冲起来!'], rpeBase:8},
+    {move:'tab 1 pulse 1', cues:['Pulse 跟住!','Pulse 不要掉!','全力 pulse!'], rpeBase:8},
+    {move:'right pull left pull', cues:['Pull 交替拉起来','全力 pull!','左右 pull 冲!'], rpeBase:7},
+    {move:'up 2 down 2', cues:['最后冲！','快速起落!','冲冲冲!'], rpeBase:7},
+    {move:'sway right 4 sway left 4', cues:['恢复，摇起来','喘口气，左右摇','Bridge 放松摇'], rpeBase:5},
+    {move:'shoulder tab', cues:['Bridge 喘息','过渡肩膀 tab','短暂恢复'], rpeBase:5},
+  ],
+  cool: [
+    {move:'sway right 4 sway left 4', cues:['深呼吸，跟着摇','慢慢摇，享受','轻松摇摆'], rpeBase:3},
+    {move:'up 4 down 4', cues:['慢下来，呼吸','四拍慢起落','放松节奏'], rpeBase:3},
+    {move:'shoulder tab', cues:['肩膀放松，享受','肩膀轻轻跟','放松肩膀'], rpeBase:3},
+    {move:'up 2 down 2', cues:['轻轻跟住','保持轻松','二上二下收尾'], rpeBase:4},
+  ],
+};
+
+// Coach script templates per theme
+const SCRIPT_TEMPLATES = {
+  'EDM Big-Room': {
+    titles: ['EDM Big-Room Festival Night','Main Stage Energy','Festival Anthem Session','Big Room Blast'],
+    opening: '大家晚上好！今晚是 EDM Festival 之夜，{duration} 分钟我们要从暖身一路冲到 main stage！跟住我的口令，能量越来越高。记住：你的阻力你做主，跟不上就降阻力但不要停腿。Ready? Let\'s go!',
+    cues:[
+      {segment:'Warm-up',text:'找到你的节奏，不急，肩膀松开'},
+      {segment:'Build 1',text:'开始加码！Tab back 稳住！'},
+      {segment:'Build 2',text:'Pull! 左右交替！感觉到了吗？我们在爬坡！'},
+      {segment:'Peak 入口',text:'3, 2, 1… DROP! 全力输出！这是你的 main stage!'},
+      {segment:'Peak 恢复',text:'30 秒恢复！呼吸！下一个 drop 更大！'},
+      {segment:'Cool-down',text:'最难的部分结束了！你们太强了。慢慢摇，享受这一刻'},
+    ],
+    rescue:['降阻力不丢节奏！腿不停，强度自己调！','跟不上 double 就做 single，动作对就行！','闭上眼睛，只听鼓点，找回你的呼吸！'],
+  },
+  'Pop / Dance-Pop': {
+    titles: ['Pop Dance Party','Dance-Pop Groove Night','Pop Hits Ride','Feel-Good Pop Session'],
+    opening: '嘿！今晚是 Pop Dance Party！{duration} 分钟全是你们熟悉的歌，跟着旋律骑起来！不用想太多，身体跟着音乐走就对了。Let\'s dance!',
+    cues:[
+      {segment:'Warm-up',text:'跟着旋律，轻松起步'},
+      {segment:'Build 1',text:'开始加速！跟住副歌节奏！'},
+      {segment:'Build 2',text:'越来越嗨！Pull 拉起来！'},
+      {segment:'Peak 入口',text:'副歌来了！全力跟住！这是你的舞台！'},
+      {segment:'Peak 恢复',text:'喘口气！下一首更好听！'},
+      {segment:'Cool-down',text:'最后放松，享受音乐，你们太棒了！'},
+    ],
+    rescue:['节奏跟住就好，强度自己调！','做不了 double 就做 single！','深呼吸，找回节奏再跟上！'],
+  },
+  'Latin / Reggaeton': {
+    titles: ['Latin Fiesta Ride','Reggaeton Heat','Latin Rhythm Night','Fiesta en Bicicleta'],
+    opening: '今晚是 Latin Fiesta！{duration} 分钟纯拉丁节奏，让你的身体跟着鼓点摇起来！Reggaeton 的律动感，骑车也能跳舞！Vamos!',
+    cues:[
+      {segment:'Warm-up',text:'跟着节奏摇，Latin groove 热身'},
+      {segment:'Build 1',text:'节奏加快！Sway 摇起来！'},
+      {segment:'Build 2',text:'Pull! 拉丁节奏越来越紧！'},
+      {segment:'Peak 入口',text:'Reggaeton drop! 全力输出！Dale!'},
+      {segment:'Peak 恢复',text:'恢复一下！还有更热的！'},
+      {segment:'Cool-down',text:'最后的摇摆，放松享受，Muy bien!'},
+    ],
+    rescue:['跟不上就降阻力，摇摆不要停！','动作做小一点也没关系！','听鼓点，找到 1-2-3-4 再跟上！'],
+  },
+  'Hip-Hop / R&B': {
+    titles: ['Hip-Hop Power Ride','R&B Groove Session','Beats & Bars Ride','Urban Rhythm Night'],
+    opening: '什么情况！今晚是 Hip-Hop Night！{duration} 分钟全是硬核节拍！跟住 beat，你就是这条街最骑的！Ready? Let\'s ride!',
+    cues:[
+      {segment:'Warm-up',text:'找到 groove，低调起步'},
+      {segment:'Build 1',text:'Beat 加重了！Tab 跟住！'},
+      {segment:'Build 2',text:'越来越猛！Pull 拉起来！'},
+      {segment:'Peak 入口',text:'Beat drop! 全力冲！这是你的 moment!'},
+      {segment:'Peak 恢复',text:'恢复！下一波 beat 更重！'},
+      {segment:'Cool-down',text:'收工！你们太硬了！慢慢 groove 回来'},
+    ],
+    rescue:['降阻力跟节奏！Beat 不能丢！','做 single 就行，groove 最重要！','闭眼听 bass，找回呼吸！'],
+  },
+};
+
+// ============================================================
+// GENERATION ENGINE
+// ============================================================
+function seededRandom(seed){
+  let s = seed;
+  return function(){
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function matchesArtist(track, artistList){
+  if(!artistList || !artistList.length) return false;
+  const tLow = (track.artist + ' ' + track.tags.join(' ')).toLowerCase();
+  return artistList.some(a => {
+    const aLow = a.trim().toLowerCase();
+    if(!aLow) return false;
+    return tLow.includes(aLow);
+  });
+}
+
+function fmtTime(sec){
+  const m = Math.floor(sec/60);
+  const s = Math.floor(sec%60);
+  return `${m}:${s<10?'0'+s:s}`;
+}
+
+function fmtDuration(sec){
+  return fmtTime(sec);
+}
+
+function generateChoreo(track, segType, intensity, level, rng){
+  const pool = MOVES[segType] || MOVES.build;
+  const durSec = track.durSec;
+  const segments = [];
+  const numSegs = segType==='warmup'||segType==='cool' ? 4 : (durSec > 270 ? 6 : 5);
+
+  // Intensity multiplier
+  const intMul = intensity==='Low'?0.7 : intensity==='Medium'?0.85 : 1.0;
+  const levelMul = level==='Beginner'?0.7 : level==='Mixed'?0.85 : level==='Advanced'?1.1 : 1.0;
+
+  const segDur = Math.floor(durSec / numSegs);
+  const usedMoves = [];
+
+  for(let i=0; i<numSegs; i++){
+    const startSec = i * segDur;
+    const endSec = i===numSegs-1 ? durSec : (i+1)*segDur;
+
+    // Check if a drop falls in this segment
+    const hasDrop = track.drops.some(d => d.timeSec >= startSec && d.timeSec < endSec);
+
+    // Pick move: prefer high-energy moves for drop segments
+    let candidates = [...pool];
+    // Avoid repeating the same move consecutively
+    if(usedMoves.length > 0){
+      const lastMove = usedMoves[usedMoves.length-1];
+      candidates = candidates.filter(c => c.move !== lastMove);
+      if(candidates.length === 0) candidates = [...pool];
+    }
+
+    // Sort: for drop segments, prefer higher rpeBase
+    if(hasDrop && segType !== 'warmup' && segType !== 'cool'){
+      candidates.sort((a,b) => b.rpeBase - a.rpeBase);
+    } else if(i === 0 || i === numSegs-1){
+      // First/last segment: prefer lower energy
+      candidates.sort((a,b) => a.rpeBase - b.rpeBase);
+    }
+
+    const pick = candidates[Math.floor(rng() * Math.min(3, candidates.length))];
+    usedMoves.push(pick.move);
+
+    let rpe = Math.round(pick.rpeBase * intMul * levelMul);
+    rpe = Math.max(1, Math.min(10, rpe));
+
+    const cue = pick.cues[Math.floor(rng() * pick.cues.length)];
+
+    segments.push({
+      time: `${fmtTime(startSec)}–${fmtTime(endSec)}`,
+      move: pick.move,
+      cue: cue,
+      rpe: rpe
+    });
+  }
+
+  return segments;
+}
+
+function buildPlan(settings){
+  const {date, duration, theme, level, intensity, explicit, artists} = settings;
+  const seed = (date||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0) + duration + theme.length + level.length;
+  const rng = seededRandom(seed + Date.now() % 10000);
+
+  // Parse artist list
+  const artistList = artists ? artists.split(/[,，;；]/).map(a=>a.trim()).filter(Boolean) : [];
+
+  // Genre matching
+  const genreMap = {
+    'EDM Big-Room': 'EDM Big-Room',
+    'Pop / Dance-Pop': 'Pop / Dance-Pop',
+    'Latin / Reggaeton': 'Latin / Reggaeton',
+    'Hip-Hop / R&B': 'Hip-Hop / R&B',
+  };
+  const targetGenre = genreMap[theme] || 'EDM Big-Room';
+
+  // Filter tracks
+  let pool = TRACK_DB.filter(t => t.genre === targetGenre);
+  if(!explicit) pool = pool.filter(t => !t.explicit);
+
+  // Also include cross-genre artist matches
+  if(artistList.length){
+    const crossGenre = TRACK_DB.filter(t => matchesArtist(t, artistList) && (explicit || !t.explicit));
+    crossGenre.forEach(t => {
+      if(!pool.find(p => p.title === t.title && p.artist === t.artist)){
+        pool.push(t);
+      }
+    });
+  }
+
+  // Shuffle pool
+  for(let i=pool.length-1;i>0;i--){
+    const j=Math.floor(rng()*(i+1));
+    [pool[i],pool[j]]=[pool[j],pool[i]];
+  }
+
+  // Sort by energy for segment assignment, but shuffle within same energy level
+  const byEnergy = [...pool].sort((a,b) => {
+    if(a.energy !== b.energy) return a.energy - b.energy;
+    // Randomize order within same energy level
+    return rng() - 0.5;
+  });
+
+  // Segment time allocation
+  const totalSec = duration * 60;
+  const segAlloc = duration <= 30
+    ? [{name:'Warm-up',badge:'warmup',pct:0.15,type:'warmup'},{name:'Build',badge:'build',pct:0.25,type:'build'},{name:'Peak',badge:'peak',pct:0.35,type:'peak'},{name:'Cool-down',badge:'cool',pct:0.25,type:'cool'}]
+    : [{name:'Warm-up',badge:'warmup',pct:0.13,type:'warmup'},{name:'Build 1',badge:'build',pct:0.20,type:'build'},{name:'Build 2',badge:'build',pct:0.20,type:'build'},{name:'Peak',badge:'peak',pct:0.27,type:'peak'},{name:'Cool-down',badge:'cool',pct:0.20,type:'cool'}];
+
+  // Assign time ranges
+  let elapsed = 0;
+  segAlloc.forEach(seg => {
+    seg.startSec = elapsed;
+    seg.durSec = Math.round(totalSec * seg.pct);
+    elapsed += seg.durSec;
+    seg.endSec = elapsed;
+  });
+  // Fix rounding
+  segAlloc[segAlloc.length-1].endSec = totalSec;
+  segAlloc[segAlloc.length-1].durSec = totalSec - segAlloc[segAlloc.length-1].startSec;
+
+  // Energy ranges per segment type
+  const energyRange = {warmup:[1,5], build:[4,8], peak:[7,10], cool:[1,5]};
+
+  // Select tracks for each segment
+  const usedTitles = new Set();
+  const segments = [];
+
+  // Prioritize artist-matched tracks
+  const artistTracks = artistList.length ? pool.filter(t => matchesArtist(t, artistList)) : [];
+
+  segAlloc.forEach(seg => {
+    const [minE, maxE] = energyRange[seg.type];
+    const segTargetSec = seg.durSec;
+    let filled = 0;
+    const tracks = [];
+    const alts = [];
+
+    // Try to place artist tracks first (if energy fits)
+    artistTracks.forEach(at => {
+      if(usedTitles.has(at.title)) return;
+      if(at.energy >= minE && at.energy <= maxE && filled + at.durSec <= segTargetSec + 60){
+        tracks.push(at);
+        usedTitles.add(at.title);
+        filled += at.durSec;
+      }
+    });
+
+    // Fill remaining from pool
+    const candidates = byEnergy.filter(t => t.energy >= minE && t.energy <= maxE && !usedTitles.has(t.title));
+    // Also allow slightly out of range
+    const fallback = byEnergy.filter(t => !usedTitles.has(t.title));
+
+    const pickFrom = candidates.length ? candidates : fallback;
+    for(const t of pickFrom){
+      if(filled >= segTargetSec - 30) break;
+      if(usedTitles.has(t.title)) continue;
+      tracks.push(t);
+      usedTitles.add(t.title);
+      filled += t.durSec;
+    }
+
+    // Pick 1 alt
+    const altCand = byEnergy.filter(t => t.energy >= minE && t.energy <= maxE && !usedTitles.has(t.title));
+    if(altCand.length){
+      const alt = altCand[Math.floor(rng() * altCand.length)];
+      alts.push(`${alt.title} — ${alt.artist} (${alt.version}, ${alt.bpm} BPM)`);
+    }
+
+    // BPM range
+    const bpms = tracks.map(t=>t.bpm);
+    const bpmMin = bpms.length ? Math.min(...bpms) : 120;
+    const bpmMax = bpms.length ? Math.max(...bpms) : 130;
+
+    segments.push({
+      name: seg.name,
+      badge: seg.badge,
+      time: `${fmtTime(seg.startSec)} – ${fmtTime(seg.endSec)}`,
+      bpmRange: bpmMin === bpmMax ? `${bpmMin}` : `${bpmMin}–${bpmMax}`,
+      tracks: tracks.map(t => ({
+        title: t.title,
+        artist: t.artist,
+        version: t.version,
+        duration: fmtDuration(t.durSec),
+        bpm: String(t.bpm),
+        drops: t.drops.map(d => ({time: fmtTime(d.timeSec), type: d.type, confidence: d.conf})),
+        timeline: generateChoreo(t, seg.type, intensity, level, rng),
+      })),
+      alt: alts,
+    });
+  });
+
+  // Energy curve
+  const curvePoints = [];
+  const rpeMap = {warmup:3, build:6, peak:9, cool:3};
+  const intAdj = intensity==='Low'?-1:intensity==='High'?1:0;
+  segments.forEach((seg,i) => {
+    const baseRpe = rpeMap[seg.badge==='build'?'build':seg.badge==='peak'?'peak':seg.badge==='cool'?'cool':'warmup'];
+    if(seg.tracks.length > 1){
+      seg.tracks.forEach((t,ti) => {
+        const adj = ti === 0 ? 0 : 1;
+        const rpe = Math.max(1, Math.min(10, baseRpe + adj + intAdj));
+        const colors = {warmup:'#22c55e',build:'#eab308',peak:'#ef4444',cool:'#06b6d4'};
+        curvePoints.push({label:`${seg.name}${seg.tracks.length>1?String.fromCharCode(97+ti):''}`, rpe, color:colors[seg.badge==='build'?'build':seg.badge==='peak'?'peak':seg.badge==='cool'?'cool':'warmup']});
+      });
+    } else {
+      const rpe = Math.max(1, Math.min(10, baseRpe + intAdj));
+      const colors = {warmup:'#22c55e',build:'#eab308',peak:'#ef4444',cool:'#06b6d4'};
+      curvePoints.push({label:seg.name, rpe, color:colors[seg.badge==='build'?'build':seg.badge==='peak'?'peak':seg.badge==='cool'?'cool':'warmup']});
+    }
+  });
+
+  // Script
+  const tmpl = SCRIPT_TEMPLATES[theme] || SCRIPT_TEMPLATES['EDM Big-Room'];
+  const planTitle = tmpl.titles[Math.floor(rng() * tmpl.titles.length)];
+
+  // Search list
+  const allTracks = segments.flatMap(s => s.tracks);
+  const searchList = allTracks.map(t => `${t.title} - ${t.artist.replace(/ft\.|feat\.|&/g,'').replace(/\s+/g,' ').trim()}`);
+
+  return {
+    id: 'plan-' + Date.now(),
+    created: new Date().toISOString(),
+    settings,
+    overview: {
+      title: planTitle,
+      subtitle: `${duration} min · ${level} · ${intensity} Intensity`,
+      tags: [theme, `${duration}min`, level, intensity, bpmTag(segments)],
+    },
+    energyCurve: curvePoints,
+    segments,
+    coachScript: {
+      opening: tmpl.opening.replace('{duration}', String(duration)),
+      cues: tmpl.cues,
+      rescue: tmpl.rescue,
+    },
+    searchList,
+  };
+}
+
+function bpmTag(segments){
+  const bpms = segments.flatMap(s=>s.tracks.map(t=>parseInt(t.bpm)));
+  if(!bpms.length) return 'BPM';
+  const min = Math.min(...bpms), max = Math.max(...bpms);
+  return min===max ? `${min} BPM` : `${min}–${max} BPM`;
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let currentPlan = null;
+
+function getHistory(){
+  try{ return JSON.parse(localStorage.getItem('spinerateHistory')||'[]'); }catch(e){ return []; }
+}
+function saveHistory(list){ localStorage.setItem('spinerateHistory', JSON.stringify(list)); }
+function getLastSettings(){
+  try{ return JSON.parse(localStorage.getItem('spinerateLastSettings')||'null'); }catch(e){ return null; }
+}
+function saveLastSettings(s){ localStorage.setItem('spinerateLastSettings', JSON.stringify(s)); }
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active', ['plan','input','history','spotify'][i]===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='history') renderHistory();
+  if(name==='spotify') renderSpotifyStatus();
+}
+
+// ============================================================
+// RPE color helper
+// ============================================================
+function rpeColor(v){
+  if(v<=3) return '#22c55e';
+  if(v<=5) return '#eab308';
+  if(v<=7) return '#f97316';
+  return '#ef4444';
+}
+
+// ============================================================
+// RENDER PLAN
+// ============================================================
+function renderPlan(plan){
+  currentPlan = plan;
+  const el = document.getElementById('plan-content');
+  const empty = document.getElementById('plan-empty');
+  if(!plan){ el.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  let html = '';
+
+  // Header
+  html += `<div class="header fade-in">
+    <h1>${esc(plan.overview.title)}</h1>
+    <div class="subtitle">${esc(plan.overview.subtitle)}</div>
+    <div class="tags">${plan.overview.tags.map((t,i)=>`<span class="tag ${i%2===0?'purple':'cyan'}">${esc(t)}</span>`).join('')}</div>
+  </div>`;
+
+  // Energy Curve
+  html += `<div class="energy-curve fade-in"><h3>能量曲线 Energy Curve</h3><div class="curve-bar">`;
+  const maxRpe = 10;
+  plan.energyCurve.forEach(s=>{
+    const h = (s.rpe/maxRpe)*100;
+    html += `<div class="curve-seg" style="height:${h}%;background:${s.color}"><span class="tip">RPE ${s.rpe}</span></div>`;
+  });
+  html += `</div><div class="curve-labels">${plan.energyCurve.map(s=>`<span>${esc(s.label)}</span>`).join('')}</div></div>`;
+
+  // Overview
+  html += `<div class="card fade-in"><h2><span class="icon">📋</span>Class Overview</h2><div class="overview-grid">
+    <div class="ov-item"><div class="label">日期</div><div class="value">${esc(plan.settings.date)}</div></div>
+    <div class="ov-item"><div class="label">课长</div><div class="value">${plan.settings.duration} min</div></div>
+    <div class="ov-item"><div class="label">主题</div><div class="value">${esc(plan.settings.theme)}</div></div>
+    <div class="ov-item"><div class="label">学员</div><div class="value">${esc(plan.settings.level)}</div></div>
+    <div class="ov-item"><div class="label">强度</div><div class="value">${esc(plan.settings.intensity)}</div></div>
+    <div class="ov-item"><div class="label">歌词</div><div class="value">${plan.settings.explicit?'允许 Explicit':'No Explicit'}</div></div>
+  </div></div>`;
+
+  // Segments
+  plan.segments.forEach((seg,si)=>{
+    html += `<div class="segment fade-in">`;
+    html += `<div class="segment-header"><span class="segment-badge badge-${seg.badge}">${esc(seg.name)}</span><span style="color:var(--text2);font-size:.75rem">${esc(seg.time)} · ${esc(seg.bpmRange)} BPM</span></div>`;
+
+    seg.tracks.forEach((tr,ti)=>{
+      const tid = `track-${si}-${ti}`;
+      html += `<div class="track">
+        <div class="track-head" onclick="toggleTrack('${tid}')">
+          <div class="left">
+            <span class="track-title">${esc(tr.title)}</span>
+            <span class="track-artist">${esc(tr.artist)} · ${esc(tr.version)}</span>
+          </div>
+          <div class="track-meta">
+            <span class="bpm">${esc(tr.bpm)} BPM</span>
+            <span>${esc(tr.duration)}</span>
+            <span class="chevron" id="chev-${tid}">▼</span>
+          </div>
+        </div>
+        <div class="track-body" id="body-${tid}">
+          <div class="track-content">
+            <div class="drops">${tr.drops.map(d=>`<span class="drop-chip ${d.type.includes('副')||d.type.includes('Bridge')?'secondary':''}">${esc(d.type)} ${esc(d.time)} <span style="opacity:.6">(${esc(d.confidence)})</span></span>`).join('')}</div>
+            <table class="tl-table">
+              <thead><tr><th>时间</th><th>动作</th><th>口令</th><th>RPE</th></tr></thead>
+              <tbody>${tr.timeline.map(row=>`<tr>
+                <td class="tl-time">${esc(row.time)}</td>
+                <td class="tl-move">${esc(row.move)}</td>
+                <td class="tl-cue">"${esc(row.cue)}"</td>
+                <td><div class="rpe-bar"><span class="rpe-fill" style="width:${row.rpe*6}px;background:${rpeColor(row.rpe)}"></span><span class="rpe-num" style="color:${rpeColor(row.rpe)}">${row.rpe}</span></div></td>
+              </tr>`).join('')}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+    });
+
+    if(seg.alt && seg.alt.length){
+      html += `<div style="padding:4px 0 8px;font-size:.75rem;color:var(--text2)">备选：${seg.alt.map(a=>esc(a)).join(' / ')}</div>`;
+    }
+    html += `</div>`;
+  });
+
+  // Coach Script
+  html += `<div class="card fade-in"><h2><span class="icon">🎤</span>Coach Script</h2>`;
+  html += `<div class="script-block"><div class="label">开场 (60秒)</div><p>${esc(plan.coachScript.opening)}</p><button class="copy-btn" onclick="copyText(this,'${escAttr(plan.coachScript.opening)}')">复制</button></div>`;
+  plan.coachScript.cues.forEach(c=>{
+    html += `<div class="script-block"><div class="label">${esc(c.segment)}</div><p>${esc(c.text)}</p><button class="copy-btn" onclick="copyText(this,'${escAttr(c.text)}')">复制</button></div>`;
+  });
+  html += `<div class="script-block"><div class="label">救场句</div><ul class="rescue-list">${plan.coachScript.rescue.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></div>`;
+  html += `</div>`;
+
+  // Search List & Spotify
+  html += `<div class="card fade-in"><h2><span class="icon">🔍</span>Spotify Playlist</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="spotify-btn" onclick="createSpotifyPlaylist()">
+        <svg viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+        Create Spotify Playlist
+      </button>
+      <button class="copy-btn" style="position:relative;float:none" onclick="copySearchList()">Copy Track List</button>
+    </div>
+    <div id="spotify-playlist-status"></div>
+    <ol class="search-list" id="search-list">${plan.searchList.map((s,i)=>`<li><span><span class="num">${i+1}.</span>${esc(s)}</span></li>`).join('')}</ol>
+  </div>`;
+
+  el.innerHTML = html;
+  switchTab('plan');
+}
+
+// ============================================================
+// INTERACTIONS
+// ============================================================
+function toggleTrack(id){
+  const body = document.getElementById('body-'+id);
+  const chev = document.getElementById('chev-'+id);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+function copyText(btn, text){
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='已复制';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='复制';btn.classList.remove('copied');},1500);
+  });
+}
+
+function copySearchList(){
+  if(!currentPlan) return;
+  const text = currentPlan.searchList.map((s,i)=>`${i+1}. ${s}`).join('\n');
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.querySelector('#search-list').parentElement.querySelector('.copy-btn');
+    if(btn){btn.textContent='已复制';btn.classList.add('copied');setTimeout(()=>{btn.textContent='一键复制全部';btn.classList.remove('copied');},1500);}
+  });
+}
+
+// ============================================================
+// FORM / GENERATE
+// ============================================================
+function readForm(){
+  return {
+    date: document.getElementById('f-date').value || new Date().toISOString().slice(0,10),
+    duration: parseInt(document.getElementById('f-duration').value),
+    theme: document.getElementById('f-theme').value,
+    level: document.getElementById('f-level').value,
+    intensity: document.getElementById('f-intensity').value,
+    explicit: document.getElementById('f-explicit').value === 'yes',
+    artists: document.getElementById('f-artists').value
+  };
+}
+
+function fillForm(s){
+  if(!s) return;
+  if(s.date) document.getElementById('f-date').value = s.date;
+  if(s.duration) document.getElementById('f-duration').value = s.duration;
+  if(s.theme) document.getElementById('f-theme').value = s.theme;
+  if(s.level) document.getElementById('f-level').value = s.level;
+  if(s.intensity) document.getElementById('f-intensity').value = s.intensity;
+  if(s.explicit!==undefined) document.getElementById('f-explicit').value = s.explicit?'yes':'no';
+  if(s.artists) document.getElementById('f-artists').value = s.artists;
+}
+
+function generatePlan(){
+  const s = readForm();
+  saveLastSettings(s);
+
+  // Run the generation engine
+  const plan = buildPlan(s);
+
+  // Save to history
+  const hist = getHistory();
+  hist.unshift({id:plan.id, created:plan.created, settings:s, title:plan.overview.title});
+  if(hist.length > 20) hist.pop();
+  saveHistory(hist);
+  localStorage.setItem('spineratePlan_'+plan.id, JSON.stringify(plan));
+
+  renderPlan(plan);
+}
+
+function loadDemo(){
+  // Demo = EDM Big-Room 45min Intermediate High
+  const s = {date:new Date().toISOString().slice(0,10),duration:45,theme:'EDM Big-Room',level:'Intermediate',intensity:'High',explicit:true,artists:''};
+  const plan = buildPlan(s);
+  plan.id = 'demo-' + Date.now();
+
+  const hist = getHistory();
+  hist.unshift({id:plan.id, created:plan.created, settings:s, title:plan.overview.title});
+  if(hist.length > 20) hist.pop();
+  saveHistory(hist);
+  localStorage.setItem('spineratePlan_'+plan.id, JSON.stringify(plan));
+
+  renderPlan(plan);
+}
+
+// ============================================================
+// HISTORY
+// ============================================================
+function renderHistory(){
+  const hist = getHistory();
+  const el = document.getElementById('history-list');
+  const empty = document.getElementById('history-empty');
+  if(!hist.length){ el.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  el.innerHTML = hist.map(h=>`<div class="history-item" onclick="loadHistory('${h.id}')">
+    <div>
+      <div class="hi-info">${esc(h.title)} · ${esc(h.settings.theme)}</div>
+      <div class="hi-date">${esc(h.settings.date)} · ${h.settings.duration}min · ${esc(h.settings.level)}</div>
+    </div>
+    <button class="hi-del" onclick="event.stopPropagation();deleteHistory('${h.id}')">删除</button>
+  </div>`).join('');
+}
+
+function loadHistory(id){
+  try{
+    const plan = JSON.parse(localStorage.getItem('spineratePlan_'+id));
+    if(plan) renderPlan(plan);
+  }catch(e){}
+}
+
+function deleteHistory(id){
+  let hist = getHistory().filter(h=>h.id!==id);
+  saveHistory(hist);
+  localStorage.removeItem('spineratePlan_'+id);
+  renderHistory();
+  if(currentPlan && currentPlan.id===id){ currentPlan=null; renderPlan(null); }
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function esc(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n'); }
+
+// ============================================================
+// SPOTIFY INTEGRATION (PKCE OAuth Flow)
+// ============================================================
+const SPOTIFY_SCOPES = 'playlist-modify-public playlist-modify-private';
+
+function getSpotifySettings(){
+  try{ return JSON.parse(localStorage.getItem('spinerate_spotify')||'{}'); }catch(e){ return {}; }
+}
+function setSpotifySettings(obj){
+  const cur = getSpotifySettings();
+  localStorage.setItem('spinerate_spotify', JSON.stringify({...cur,...obj}));
+}
+
+function saveSpotifySettings(){
+  const clientId = document.getElementById('f-spotify-client-id').value.trim();
+  if(!clientId){ alert('Please enter a Spotify Client ID'); return; }
+  setSpotifySettings({clientId});
+  renderSpotifyStatus();
+}
+
+function getRedirectUri(){
+  // Use current page URL without hash/query as redirect
+  return window.location.origin + window.location.pathname;
+}
+
+// PKCE helpers
+function generateRandomString(len){
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => b.toString(16).padStart(2,'0')).join('').slice(0, len);
+}
+
+async function sha256(plain){
+  const data = new TextEncoder().encode(plain);
+  return await crypto.subtle.digest('SHA-256', data);
+}
+
+function base64urlencode(buf){
+  let str = '';
+  const bytes = new Uint8Array(buf);
+  for(const b of bytes) str += String.fromCharCode(b);
+  return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function spotifyConnect(){
+  const settings = getSpotifySettings();
+  if(!settings.clientId){
+    alert('Please save your Spotify Client ID first (in the Spotify tab).');
+    switchTab('spotify');
+    return;
+  }
+
+  // Generate PKCE verifier & challenge
+  const verifier = generateRandomString(64);
+  const challenge = base64urlencode(await sha256(verifier));
+  const state = generateRandomString(16);
+
+  // Store for callback
+  setSpotifySettings({pkceVerifier: verifier, oauthState: state});
+
+  const params = new URLSearchParams({
+    client_id: settings.clientId,
+    response_type: 'code',
+    redirect_uri: getRedirectUri(),
+    scope: SPOTIFY_SCOPES,
+    state: state,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+  });
+
+  window.location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
+}
+
+async function handleSpotifyCallback(){
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+  const error = params.get('error');
+
+  if(!code && !error) return; // Not a callback
+
+  // Clean URL
+  window.history.replaceState({}, '', window.location.pathname);
+
+  if(error){
+    alert('Spotify authorization failed: ' + error);
+    return;
+  }
+
+  const settings = getSpotifySettings();
+  if(state !== settings.oauthState){
+    alert('Spotify authorization failed: state mismatch');
+    return;
+  }
+
+  // Exchange code for token
+  try{
+    const resp = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({
+        client_id: settings.clientId,
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: getRedirectUri(),
+        code_verifier: settings.pkceVerifier,
+      }),
+    });
+
+    if(!resp.ok){
+      const err = await resp.json().catch(()=>({}));
+      throw new Error(err.error_description || err.error || 'Token exchange failed');
+    }
+
+    const data = await resp.json();
+    setSpotifySettings({
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      tokenExpiry: Date.now() + (data.expires_in * 1000),
+      pkceVerifier: null,
+      oauthState: null,
+    });
+
+    // Fetch user profile
+    await fetchSpotifyProfile();
+    renderSpotifyStatus();
+  }catch(e){
+    alert('Spotify token exchange failed: ' + e.message);
+  }
+}
+
+async function refreshSpotifyToken(){
+  const settings = getSpotifySettings();
+  if(!settings.refreshToken || !settings.clientId) return false;
+
+  try{
+    const resp = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({
+        client_id: settings.clientId,
+        grant_type: 'refresh_token',
+        refresh_token: settings.refreshToken,
+      }),
+    });
+
+    if(!resp.ok) return false;
+
+    const data = await resp.json();
+    setSpotifySettings({
+      accessToken: data.access_token,
+      tokenExpiry: Date.now() + (data.expires_in * 1000),
+      ...(data.refresh_token ? {refreshToken: data.refresh_token} : {}),
+    });
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+async function getValidToken(){
+  const settings = getSpotifySettings();
+  if(!settings.accessToken) return null;
+
+  // Refresh if expired or about to expire (within 60s)
+  if(settings.tokenExpiry && Date.now() > settings.tokenExpiry - 60000){
+    const ok = await refreshSpotifyToken();
+    if(!ok){
+      setSpotifySettings({accessToken:null, refreshToken:null, tokenExpiry:null, spotifyUser:null});
+      return null;
+    }
+    return getSpotifySettings().accessToken;
+  }
+  return settings.accessToken;
+}
+
+async function fetchSpotifyProfile(){
+  const token = await getValidToken();
+  if(!token) return;
+  try{
+    const resp = await fetch('https://api.spotify.com/v1/me', {
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    if(resp.ok){
+      const user = await resp.json();
+      setSpotifySettings({spotifyUser: {id: user.id, name: user.display_name, email: user.email}});
+    }
+  }catch(e){}
+}
+
+function spotifyDisconnect(){
+  setSpotifySettings({accessToken:null, refreshToken:null, tokenExpiry:null, spotifyUser:null});
+  renderSpotifyStatus();
+}
+
+function renderSpotifyStatus(){
+  const settings = getSpotifySettings();
+  const statusEl = document.getElementById('spotify-status');
+  const connectBtn = document.getElementById('spotify-connect-btn');
+  const disconnectBtn = document.getElementById('spotify-disconnect-btn');
+
+  // Set redirect URI display
+  const redirectInput = document.getElementById('f-spotify-redirect');
+  if(redirectInput) redirectInput.value = getRedirectUri();
+
+  // Set client ID from storage
+  const clientInput = document.getElementById('f-spotify-client-id');
+  if(clientInput && settings.clientId && !clientInput.value) clientInput.value = settings.clientId;
+
+  if(!statusEl) return;
+
+  if(settings.accessToken && settings.spotifyUser){
+    statusEl.innerHTML = `<span class="spotify-status-connected">Connected as ${esc(settings.spotifyUser.name || settings.spotifyUser.id)}</span>`;
+    if(connectBtn) connectBtn.style.display = 'none';
+    if(disconnectBtn) disconnectBtn.style.display = '';
+  } else if(settings.clientId){
+    statusEl.innerHTML = '<span class="spotify-status-disconnected">Not connected. Click "Connect Spotify" to authorize.</span>';
+    if(connectBtn) connectBtn.style.display = '';
+    if(disconnectBtn) disconnectBtn.style.display = 'none';
+  } else {
+    statusEl.innerHTML = '<span class="spotify-status-disconnected">Enter your Spotify Client ID above to get started.</span>';
+    if(connectBtn) connectBtn.style.display = '';
+    if(disconnectBtn) disconnectBtn.style.display = 'none';
+  }
+}
+
+async function spotifyApiRequest(url, options = {}){
+  const token = await getValidToken();
+  if(!token){
+    alert('Not connected to Spotify. Please go to the Spotify tab and connect first.');
+    switchTab('spotify');
+    return null;
+  }
+  const resp = await fetch(url, {
+    ...options,
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+  if(resp.status === 401){
+    // Try refresh
+    const ok = await refreshSpotifyToken();
+    if(ok){
+      const newToken = getSpotifySettings().accessToken;
+      const retry = await fetch(url, {
+        ...options,
+        headers: {
+          'Authorization': 'Bearer ' + newToken,
+          'Content-Type': 'application/json',
+          ...(options.headers || {}),
+        },
+      });
+      return retry;
+    }
+    alert('Spotify session expired. Please reconnect.');
+    spotifyDisconnect();
+    switchTab('spotify');
+    return null;
+  }
+  return resp;
+}
+
+async function searchSpotifyTrack(query){
+  const params = new URLSearchParams({q: query, type: 'track', limit: '1'});
+  const resp = await spotifyApiRequest('https://api.spotify.com/v1/search?' + params.toString());
+  if(!resp || !resp.ok) return null;
+  const data = await resp.json();
+  if(data.tracks && data.tracks.items && data.tracks.items.length > 0){
+    return data.tracks.items[0].uri;
+  }
+  return null;
+}
+
+async function createSpotifyPlaylist(){
+  if(!currentPlan){
+    alert('No lesson plan loaded. Generate a plan first.');
+    return;
+  }
+
+  const token = await getValidToken();
+  if(!token){
+    alert('Not connected to Spotify. Please go to the Spotify tab and connect first.');
+    switchTab('spotify');
+    return;
+  }
+
+  const settings = getSpotifySettings();
+  const userId = settings.spotifyUser?.id;
+  if(!userId){
+    alert('Could not find your Spotify user ID. Please reconnect.');
+    switchTab('spotify');
+    return;
+  }
+
+  const statusEl = document.getElementById('spotify-playlist-status');
+  const planTitle = currentPlan.overview.title;
+  const planDate = currentPlan.settings.date;
+
+  statusEl.innerHTML = `<div class="spotify-progress">
+    <span id="sp-progress-text">Creating playlist...</span>
+    <div class="bar"><div class="bar-fill" id="sp-progress-bar" style="width:5%"></div></div>
+  </div>`;
+
+  try{
+    // 1. Create playlist
+    const createResp = await spotifyApiRequest(`https://api.spotify.com/v1/users/${encodeURIComponent(userId)}/playlists`, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: `${planTitle} — ${planDate}`,
+        description: `Spinerate lesson plan: ${currentPlan.settings.theme} · ${currentPlan.settings.duration}min · ${currentPlan.settings.level} · ${currentPlan.settings.intensity}`,
+        public: false,
+      }),
+    });
+
+    if(!createResp || !createResp.ok){
+      const err = await createResp?.json().catch(()=>({}));
+      throw new Error(err?.error?.message || 'Failed to create playlist');
+    }
+
+    const playlist = await createResp.json();
+    const playlistId = playlist.id;
+    const playlistUrl = playlist.external_urls?.spotify;
+
+    // 2. Search for each track and collect URIs
+    const trackUris = [];
+    const total = currentPlan.searchList.length;
+
+    for(let i = 0; i < total; i++){
+      const query = currentPlan.searchList[i];
+      const pct = Math.round(((i + 1) / total) * 90) + 5;
+      document.getElementById('sp-progress-text').textContent = `Searching track ${i+1}/${total}: ${query}`;
+      document.getElementById('sp-progress-bar').style.width = pct + '%';
+
+      const uri = await searchSpotifyTrack(query);
+      if(uri) trackUris.push(uri);
+
+      // Small delay to avoid rate limits
+      if(i < total - 1) await new Promise(r => setTimeout(r, 100));
+    }
+
+    // 3. Add tracks to playlist (max 100 per request)
+    if(trackUris.length > 0){
+      document.getElementById('sp-progress-text').textContent = 'Adding tracks to playlist...';
+      document.getElementById('sp-progress-bar').style.width = '95%';
+
+      for(let i = 0; i < trackUris.length; i += 100){
+        const batch = trackUris.slice(i, i + 100);
+        await spotifyApiRequest(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+          method: 'POST',
+          body: JSON.stringify({uris: batch}),
+        });
+      }
+    }
+
+    // Done
+    document.getElementById('sp-progress-bar').style.width = '100%';
+    statusEl.innerHTML = `<div class="spotify-progress" style="border:1px solid #1DB954">
+      <span style="color:#1DB954;font-weight:600">Playlist created! ${trackUris.length}/${total} tracks added.</span>
+      ${playlistUrl ? `<br><a href="${esc(playlistUrl)}" target="_blank" rel="noopener" style="color:#1DB954">Open in Spotify</a>` : ''}
+      ${trackUris.length < total ? `<br><span style="color:var(--text2);font-size:.8rem">${total - trackUris.length} track(s) could not be found on Spotify.</span>` : ''}
+    </div>`;
+
+  }catch(e){
+    statusEl.innerHTML = `<div class="spotify-progress" style="border:1px solid var(--red)">
+      <span style="color:var(--red)">Error: ${esc(e.message)}</span>
+    </div>`;
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+(async function init(){
+  // Restore last settings
+  const last = getLastSettings();
+  if(last) fillForm(last);
+  // Set default date
+  if(!document.getElementById('f-date').value){
+    document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+  }
+  // Check if there's a recent plan
+  const hist = getHistory();
+  if(hist.length){
+    try{
+      const plan = JSON.parse(localStorage.getItem('spineratePlan_'+hist[0].id));
+      if(plan) renderPlan(plan);
+    }catch(e){}
+  }
+
+  // Spotify: set redirect URI display
+  const redirectInput = document.getElementById('f-spotify-redirect');
+  if(redirectInput) redirectInput.value = getRedirectUri();
+
+  // Spotify: restore client ID
+  const spSettings = getSpotifySettings();
+  const clientInput = document.getElementById('f-spotify-client-id');
+  if(clientInput && spSettings.clientId) clientInput.value = spSettings.clientId;
+
+  // Handle Spotify OAuth callback
+  await handleSpotifyCallback();
+})();
+</script>
+</body>
+</html>
