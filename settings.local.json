@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start \"\" \"C:\\\\Users\\\\Wang Peng Fei\\\\Desktop\\\\动感单车 Agent\\\\index.html\")",
+      "Bash(dir /s \"C:\\\\Users\\\\Wang Peng Fei\\\\Desktop\\\\动感单车 Agent\")",
+      "Bash(dir:*)",
+      "Bash(python -m http.server:*)",
+      "Bash(start chrome:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout /t 2 /nobreak)",
+      "Bash(git init:*)",
+      "Bash(gh auth:*)",
+      "Bash(where:*)"
+    ]
+  }
+}
